@@ -1,36 +1,91 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+## Subs Manager
 
-## Getting Started
+Stack: Next.js 15 (App Router), Prisma + PostgreSQL, NextAuth (credenciales), Redis + BullMQ, Resend, TailwindCSS.
 
-First, run the development server:
+### Requisitos
+- Docker y Docker Compose
+
+### Configuración
+1) Variables de entorno
+- Copia `.env.example` a `.env` y ajusta valores (NEXTAUTH_URL, NEXTAUTH_SECRET, DATABASE_URL, REDIS_URL).
+
+2) Dependencias (si desarrollas en tu host)
+
+```bash
+npm install
+```
+
+3) Infraestructura local con Docker (Postgres + Redis)
+
+```bash
+npm run dev:infra:up
+```
+
+4) Base de datos (Prisma)
+
+```bash
+npm run db:migrate
+```
+
+5) Desarrollo en tu host (recomendado)
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+6) Desarrollo dentro de Docker con hot reloading (opcional)
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```bash
+npm run dev:docker
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+7) Desarrollo “prod-like” (contenedor ejecutando next start)
 
-## Learn More
+```bash
+npm run dev:prodlike
+```
 
-To learn more about Next.js, take a look at the following resources:
+8) Worker BullMQ (opcional)
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+```bash
+npm run worker
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+### Infra local (Docker)
 
-## Deploy on Vercel
+```bash
+npm run dev:infra:down
+```
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+### Docker (app + worker) en producción
+- El Dockerfile está en `docker/Dockerfile` (imagen de producción: build + next start).
+- Levantar app y worker en modo producción con Docker Compose (infra separada o previa):
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+```bash
+docker compose -f docker/compose.prod.yml up --build app worker
+```
+
+Notas
+- El build de producción usa un flag para no conectar a Redis durante el prerender (`REDIS_DISABLE_DURING_BUILD=1`) ya integrado en `npm run build`.
+- En desarrollo, puedes:
+	- Ejecutar Next en tu host con `npm run dev` y usar DB/Redis en Docker (más rápido).
+	- O ejecutar todo en Docker con `npm run dev:docker` (hot reload montando el código en el contenedor).
+- Para detener el stack de desarrollo en Docker con hot reload: usa `Ctrl+C` en la terminal de `dev:docker` o `docker compose -f docker/compose.infra.yml -f docker/compose.dev.yml down`.
+
+### Prisma
+- Esquema en prisma/schema.prisma
+- Prisma Studio:
+
+```bash
+npm run db:studio
+```
+
+### Rutas API MVP
+- POST /api/users (ADMIN): crea usuario y devuelve contraseña temporal
+- POST /api/auth/change-password: cambia contraseña del usuario logueado
+- CRUD básico: /api/services, /api/subscriptions, /api/profiles, /api/payments
+- POST /api/statements: genera estados de cuenta del mes actual
+
+### Notas
+- Autenticación por credenciales. Añade NEXTAUTH_SECRET y NEXTAUTH_URL en .env.
+- Redis requerido para colas y rate limit básico.
