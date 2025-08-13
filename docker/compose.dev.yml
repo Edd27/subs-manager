@@ -1,3 +1,4 @@
+name: subs-manager-dev
 services:
   app-dev:
     image: node:20-alpine

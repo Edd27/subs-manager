@@ -1,13 +1,21 @@
 "use client";
 import { useState } from "react";
 import { Button } from "./button";
-import { Dialog } from "./dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "./dialog";
 
 type Props = {
   onConfirm: () => void | Promise<void>;
   title?: string;
   description?: string;
-  label?: string;
+  label?: React.ReactNode;
   confirmText?: string;
   cancelText?: string;
   variant?: "default" | "outline" | "secondary" | "destructive";
@@ -24,44 +32,44 @@ export default function ConfirmButton({
 }: Props) {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
+
   return (
-    <>
-      <Button variant={variant} onClick={() => setOpen(true)}>
-        {label}
-      </Button>
-      <Dialog
-        open={open}
-        onOpenChange={setOpen}
-        title={title}
-        footer={
-          <>
-            <Button variant="secondary" onClick={() => setOpen(false)}>
-              {cancelText}
-            </Button>
-            <Button
-              variant="destructive"
-              onClick={async () => {
-                setLoading(true);
-                try {
-                  await onConfirm();
-                  setOpen(false);
-                } finally {
-                  setLoading(false);
-                }
-              }}
-              disabled={loading}
-            >
-              {loading ? "Procesando..." : confirmText}
-            </Button>
-          </>
-        }
-      >
-        {description && (
-          <p className="text-sm text-neutral-600 dark:text-neutral-400">
-            {description}
-          </p>
-        )}
-      </Dialog>
-    </>
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button variant={variant}>{label}</Button>
+      </DialogTrigger>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>{title}</DialogTitle>
+          {description ? (
+            <DialogDescription>{description}</DialogDescription>
+          ) : null}
+        </DialogHeader>
+        <DialogFooter>
+          <Button
+            variant="secondary"
+            onClick={() => setOpen(false)}
+            disabled={loading}
+          >
+            {cancelText}
+          </Button>
+          <Button
+            variant="destructive"
+            onClick={async () => {
+              setLoading(true);
+              try {
+                await onConfirm();
+                setOpen(false);
+              } finally {
+                setLoading(false);
+              }
+            }}
+            disabled={loading}
+          >
+            {loading ? "Procesando..." : confirmText}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }

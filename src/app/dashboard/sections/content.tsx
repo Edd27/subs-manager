@@ -1,5 +1,13 @@
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  AlertTriangle,
+  Banknote,
+  CheckCircle2,
+  CreditCard,
+  DollarSign,
+  Users,
+} from "lucide-react";
 import { cookies } from "next/headers";
 
 async function fetchMe() {
@@ -55,11 +63,24 @@ export default async function DashboardContent() {
           title="Balance"
           value={`$${data.balance.balance.toFixed(2)}`}
           variant={data.balance.balance >= 0 ? "success" : "warning"}
+          icon={<DollarSign className="h-4 w-4" />}
         />
-        <StatCard title="Pagado" value={`$${data.balance.paid.toFixed(2)}`} />
-        <StatCard title="Adeudo" value={`$${data.balance.due.toFixed(2)}`} />
+        <StatCard
+          title="Pagado"
+          value={`$${data.balance.paid.toFixed(2)}`}
+          icon={<CreditCard className="h-4 w-4" />}
+        />
+        <StatCard
+          title="Adeudo"
+          value={`$${data.balance.due.toFixed(2)}`}
+          icon={<Banknote className="h-4 w-4" />}
+        />
         {data.adminOverview && (
-          <StatCard title="Usuarios" value={data.adminOverview.usersCount} />
+          <StatCard
+            title="Usuarios"
+            value={data.adminOverview.usersCount}
+            icon={<Users className="h-4 w-4" />}
+          />
         )}
       </div>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -75,7 +96,10 @@ export default async function DashboardContent() {
                     key={s.id}
                     className="py-3 flex items-center justify-between"
                   >
-                    <span>{s.service}</span>
+                    <span className="flex items-center gap-2">
+                      <CheckCircle2 className="h-4 w-4 text-emerald-500" />
+                      {s.service}
+                    </span>
                     <div className="flex items-center gap-2">
                       <Badge>${s.monthlyCost.toFixed(2)}</Badge>
                     </div>
@@ -97,7 +121,10 @@ export default async function DashboardContent() {
                     key={p.id}
                     className="py-3 flex items-center justify-between"
                   >
-                    <span>{new Date(p.paidAt).toLocaleDateString()}</span>
+                    <span className="flex items-center gap-2">
+                      <CreditCard className="h-4 w-4" />
+                      {new Date(p.paidAt).toLocaleDateString()}
+                    </span>
                     <Badge>${Number(p.amount).toFixed(2)}</Badge>
                   </li>
                 )
@@ -114,19 +141,34 @@ function StatCard({
   title,
   value,
   variant = "default",
+  icon,
 }: {
   title: string;
   value: string | number;
   variant?: "default" | "success" | "warning";
+  icon?: React.ReactNode;
 }) {
   return (
     <Card>
-      <CardContent className="p-4">
-        <div className="text-sm text-gray-500">{title}</div>
+      <CardContent>
+        <div className="text-sm text-gray-500 flex items-center gap-2">
+          {icon}
+          {title}
+        </div>
         <div className="text-2xl font-bold mt-1">{value}</div>
         {variant !== "default" && (
           <div className="mt-2">
-            <Badge variant={variant}>Estado</Badge>
+            <Badge variant={variant}>
+              {variant === "success" ? (
+                <span className="inline-flex items-center gap-1">
+                  <CheckCircle2 className="h-3 w-3" /> A favor
+                </span>
+              ) : (
+                <span className="inline-flex items-center gap-1">
+                  <AlertTriangle className="h-3 w-3" /> Pendiente
+                </span>
+              )}
+            </Badge>
           </div>
         )}
       </CardContent>

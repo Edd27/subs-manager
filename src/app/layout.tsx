@@ -1,5 +1,6 @@
 import SessionProviderClient from "@/components/auth/session-provider";
-import Toaster from "@/components/ui/toaster";
+import { ThemeProvider } from "@/components/theme-provider";
+import { Toaster } from "@/components/ui/sonner";
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
@@ -15,7 +16,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Subs Manager",
+  title: "Subs",
   description: "Gestión de suscripciones compartidas",
 };
 
@@ -25,12 +26,19 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="es" suppressHydrationWarning>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        <SessionProviderClient>{children}</SessionProviderClient>
-        <Toaster />
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="system"
+          enableSystem
+          disableTransitionOnChange
+        >
+          <SessionProviderClient>{children}</SessionProviderClient>
+          <Toaster />
+        </ThemeProvider>
       </body>
     </html>
   );

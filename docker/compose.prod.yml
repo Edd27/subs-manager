@@ -1,3 +1,4 @@
+name: subs-manager
 services:
   app:
     build:

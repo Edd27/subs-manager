@@ -2,9 +2,26 @@
 import { Button } from "@/components/ui/button";
 import ConfirmButton from "@/components/ui/confirm-button";
 import { Input } from "@/components/ui/input";
-import { toast } from "@/components/ui/toast";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  ArrowUpDown,
+  CreditCard,
+  Pencil,
+  Plus,
+  Save,
+  Search,
+  Trash2,
+  X,
+} from "lucide-react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
+import { toast } from "sonner";
 
 type UserRow = { id: string; email: string; name: string | null };
 
@@ -89,16 +106,9 @@ export default function AdminPayments() {
         setMethod("efectivo");
         setNotes("");
         setRefreshKey((k) => k + 1);
-        toast({ title: "Pago registrado", variant: "success" });
+        toast("Pago registrado");
       } else {
-        const data = (await res.json().catch(() => null)) as {
-          error?: string;
-        } | null;
-        toast({
-          title: "Error al registrar",
-          description: data?.error || "",
-          variant: "destructive",
-        });
+        toast("Error al registrar el pago");
       }
     } finally {
       setLoading(false);
@@ -114,16 +124,9 @@ export default function AdminPayments() {
     if (res.ok) {
       const updated: Payment = await res.json();
       setPayments((prev) => prev.map((p) => (p.id === id ? updated : p)));
-      toast({ title: "Pago actualizado", variant: "success" });
+      toast("Pago actualizado");
     } else {
-      const data = (await res.json().catch(() => null)) as {
-        error?: string;
-      } | null;
-      toast({
-        title: "Error al actualizar",
-        description: data?.error || "",
-        variant: "destructive",
-      });
+      toast("Error al actualizar el pago");
     }
   }
 
@@ -131,16 +134,9 @@ export default function AdminPayments() {
     const res = await fetch(`/api/admin/payments/${id}`, { method: "DELETE" });
     if (res.ok) {
       setPayments((prev) => prev.filter((p) => p.id !== id));
-      toast({ title: "Pago borrado", variant: "success" });
+      toast("Pago eliminado");
     } else {
-      const data = (await res.json().catch(() => null)) as {
-        error?: string;
-      } | null;
-      toast({
-        title: "Error al borrar",
-        description: data?.error || "",
-        variant: "destructive",
-      });
+      toast("Error al eliminar el pago");
     }
   }
 
@@ -170,7 +166,8 @@ export default function AdminPayments() {
     const di: "asc" | "desc" = diRaw === "asc" ? "asc" : "desc";
     if (so !== sort) setSort(so);
     if (di !== dir) setDir(di);
-  }, [searchParams, page, pageSize, query, sort, dir]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams]);
   useEffect(() => {
     const curP = searchParams.get(pageKey) || "1";
     const curS = searchParams.get(sizeKey) || "10";
@@ -179,7 +176,7 @@ export default function AdminPayments() {
     const curDi = searchParams.get(dirKey) || "desc";
     const nextP = String(page);
     const nextS = String(pageSize);
-    const nextQ = query;
+    const nextQ = query.trim();
     const nextSo = sort;
     const nextDi = dir;
     if (
@@ -193,64 +190,83 @@ export default function AdminPayments() {
     const params = new URLSearchParams(searchParams);
     params.set(pageKey, nextP);
     params.set(sizeKey, nextS);
-    if (nextQ.trim()) params.set(qKey, nextQ.trim());
+    if (nextQ) params.set(qKey, nextQ);
     else params.delete(qKey);
     params.set(sortKey, nextSo);
     params.set(dirKey, nextDi);
     router.replace(`${pathname}?${params.toString()}`, { scroll: false });
-  }, [page, pageSize, sort, dir, query, searchParams, router, pathname]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [page, pageSize, sort, dir, query, router, pathname]);
 
   return (
     <div className="space-y-6">
       <div className="rounded-lg border p-4 space-y-4">
         <div className="grid grid-cols-1 md:grid-cols-7 gap-3">
-          <select
-            className="border rounded px-3 py-2"
-            value={userId}
-            onChange={(e) => setUserId(e.target.value)}
-          >
-            <option value="">Usuario</option>
-            {users.map((u) => (
-              <option key={u.id} value={u.id}>
-                {u.email}
-              </option>
-            ))}
-          </select>
+          <Select value={userId} onValueChange={setUserId}>
+            <SelectTrigger className="w-full">
+              <SelectValue placeholder="Usuario" />
+            </SelectTrigger>
+            <SelectContent>
+              {users.map((u) => (
+                <SelectItem key={u.id} value={u.id}>
+                  {u.email}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
           <Input
             placeholder="Monto"
             value={amount}
             onChange={(e) => setAmount(e.target.value)}
           />
-          <Input
-            placeholder="Método"
-            value={method}
-            onChange={(e) => setMethod(e.target.value)}
-          />
+          <Select value={method} onValueChange={setMethod}>
+            <SelectTrigger className="w-full">
+              <SelectValue placeholder="Método" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="efectivo">Efectivo</SelectItem>
+              <SelectItem value="deposito">Depósito</SelectItem>
+              <SelectItem value="transferencia">Transferencia</SelectItem>
+            </SelectContent>
+          </Select>
           <Input
             placeholder="Notas"
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
           />
-          <Input
-            placeholder="Buscar pagos..."
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            className="md:col-span-2"
-          />
           <Button
             onClick={createPayment}
             disabled={loading || !userId || !amount}
           >
-            {loading ? "Creando..." : "Registrar pago"}
+            {loading ? (
+              "Creando..."
+            ) : (
+              <span className="inline-flex items-center gap-2">
+                <Plus className="h-4 w-4" /> Registrar pago
+              </span>
+            )}
           </Button>
         </div>
       </div>
 
       <div className="rounded-lg border p-4">
         <div className="flex items-center justify-between mb-3">
-          <h3 className="font-medium">Pagos</h3>
-          <div className="text-sm text-neutral-600 dark:text-neutral-400">
-            {total} resultados
+          <h3 className="font-medium inline-flex items-center gap-2">
+            <CreditCard className="h-4 w-4" /> Pagos
+          </h3>
+          <div className="flex items-center gap-3">
+            <div className="relative">
+              <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Buscar pagos..."
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                className="pl-8 w-[220px]"
+              />
+            </div>
+            <div className="text-sm text-neutral-600 dark:text-neutral-400">
+              {total} resultados
+            </div>
           </div>
         </div>
         {!has ? (
@@ -273,8 +289,9 @@ export default function AdminPayments() {
                         }
                       }}
                     >
-                      Monto{" "}
-                      {sort === "amount" ? (dir === "asc" ? "▲" : "▼") : ""}
+                      <span className="inline-flex items-center gap-1">
+                        Monto <ArrowUpDown className="h-3.5 w-3.5" />
+                      </span>
                     </button>
                   </th>
                   <th className="py-2 pr-4">
@@ -289,8 +306,9 @@ export default function AdminPayments() {
                         }
                       }}
                     >
-                      Fecha{" "}
-                      {sort === "paidAt" ? (dir === "asc" ? "▲" : "▼") : ""}
+                      <span className="inline-flex items-center gap-1">
+                        Fecha <ArrowUpDown className="h-3.5 w-3.5" />
+                      </span>
                     </button>
                   </th>
                   <th className="py-2 pr-4">
@@ -305,8 +323,9 @@ export default function AdminPayments() {
                         }
                       }}
                     >
-                      Método{" "}
-                      {sort === "method" ? (dir === "asc" ? "▲" : "▼") : ""}
+                      <span className="inline-flex items-center gap-1">
+                        Método <ArrowUpDown className="h-3.5 w-3.5" />
+                      </span>
                     </button>
                   </th>
                   <th className="py-2 pr-4">Notas</th>
@@ -329,10 +348,21 @@ export default function AdminPayments() {
                       {new Date(p.paidAt).toLocaleString()}
                     </td>
                     <td className="py-2 pr-4 align-middle">
-                      <InlineEdit
+                      <Select
                         value={p.method}
-                        onSave={(v) => patch(p.id, { method: v })}
-                      />
+                        onValueChange={(v) => patch(p.id, { method: v })}
+                      >
+                        <SelectTrigger size="sm" className="min-w-36">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="efectivo">Efectivo</SelectItem>
+                          <SelectItem value="deposito">Depósito</SelectItem>
+                          <SelectItem value="transferencia">
+                            Transferencia
+                          </SelectItem>
+                        </SelectContent>
+                      </Select>
                     </td>
                     <td className="py-2 pr-4 align-middle">
                       <InlineEdit
@@ -345,7 +375,11 @@ export default function AdminPayments() {
                         onConfirm={() => remove(p.id)}
                         title="Borrar pago"
                         description="Esta acción es irreversible."
-                        label="Borrar"
+                        label={
+                          <span className="inline-flex items-center gap-2">
+                            <Trash2 className="h-4 w-4" /> Borrar
+                          </span>
+                        }
                         variant="destructive"
                       />
                     </td>
@@ -358,18 +392,22 @@ export default function AdminPayments() {
                 Mostrando {total === 0 ? 0 : start + 1}–{end} de {total}
               </div>
               <div className="flex items-center gap-2">
-                <select
-                  className="border rounded px-2 py-1"
-                  value={pageSize}
-                  onChange={(e) => {
-                    setPageSize(parseInt(e.target.value));
+                <Select
+                  value={String(pageSize)}
+                  onValueChange={(v) => {
+                    setPageSize(parseInt(v));
                     setPage(1);
                   }}
                 >
-                  <option value={10}>10</option>
-                  <option value={25}>25</option>
-                  <option value={50}>50</option>
-                </select>
+                  <SelectTrigger size="sm" className="w-[90px]">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="10">10</SelectItem>
+                    <SelectItem value="25">25</SelectItem>
+                    <SelectItem value="50">50</SelectItem>
+                  </SelectContent>
+                </Select>
                 <div className="flex items-center gap-2">
                   <Button
                     variant="outline"
@@ -413,7 +451,7 @@ function InlineEdit({
       <div className="flex items-center gap-2">
         <span>{value || "—"}</span>
         <Button variant="secondary" onClick={() => setEditing(true)}>
-          Editar
+          <Pencil className="h-4 w-4 mr-1" /> Editar
         </Button>
       </div>
     );
@@ -426,10 +464,10 @@ function InlineEdit({
           setEditing(false);
         }}
       >
-        Guardar
+        <Save className="h-4 w-4 mr-1" /> Guardar
       </Button>
       <Button variant="secondary" onClick={() => setEditing(false)}>
-        Cancelar
+        <X className="h-4 w-4 mr-1" /> Cancelar
       </Button>
     </div>
   );

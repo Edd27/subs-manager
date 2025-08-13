@@ -1,10 +1,28 @@
 "use client";
 import { Button } from "@/components/ui/button";
 import ConfirmButton from "@/components/ui/confirm-button";
+import { DatePicker } from "@/components/ui/date-picker";
 import { Input } from "@/components/ui/input";
-import { toast } from "@/components/ui/toast";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
+import {
+  ArrowUpDown,
+  CalendarClock,
+  Plus,
+  Search,
+  Trash2,
+  UserPlus,
+  Users,
+} from "lucide-react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
+import { toast } from "sonner";
 
 type Service = { id: string; name: string };
 
@@ -35,9 +53,7 @@ export default function AdminSubscriptions() {
   const [total, setTotal] = useState(0);
   const [serviceId, setServiceId] = useState("");
   const [ownerId, setOwnerId] = useState("");
-  const [startDate, setStartDate] = useState<string>(
-    new Date().toISOString().slice(0, 10)
-  );
+  const [startDate, setStartDate] = useState<Date>(new Date());
   const [loading, setLoading] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
   const [query, setQuery] = useState("");
@@ -114,7 +130,8 @@ export default function AdminSubscriptions() {
     const di: "asc" | "desc" = diRaw === "asc" ? "asc" : "desc";
     if (so !== sort) setSort(so);
     if (di !== dir) setDir(di);
-  }, [searchParams, page, pageSize, query, sort, dir]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams]);
   useEffect(() => {
     const curP = searchParams.get(pageKey) || "1";
     const curS = searchParams.get(sizeKey) || "10";
@@ -123,7 +140,7 @@ export default function AdminSubscriptions() {
     const curDi = searchParams.get(dirKey) || "desc";
     const nextP = String(page);
     const nextS = String(pageSize);
-    const nextQ = query;
+    const nextQ = query.trim();
     const nextSo = sort;
     const nextDi = dir;
     if (
@@ -137,12 +154,13 @@ export default function AdminSubscriptions() {
     const params = new URLSearchParams(searchParams);
     params.set(pageKey, nextP);
     params.set(sizeKey, nextS);
-    if (nextQ.trim()) params.set(qKey, nextQ.trim());
+    if (nextQ) params.set(qKey, nextQ);
     else params.delete(qKey);
     params.set(sortKey, nextSo);
     params.set(dirKey, nextDi);
     router.replace(`${pathname}?${params.toString()}`, { scroll: false });
-  }, [page, pageSize, sort, dir, query, searchParams, router, pathname]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [page, pageSize, sort, dir, query, router, pathname]);
 
   async function createSub() {
     setLoading(true);
@@ -150,23 +168,20 @@ export default function AdminSubscriptions() {
       const res = await fetch("/api/subscriptions", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ serviceId, ownerId, startDate }),
+        body: JSON.stringify({
+          serviceId,
+          ownerId,
+          startDate: new Date(startDate).toISOString().slice(0, 10),
+        }),
       });
       if (res.ok) {
         setServiceId("");
         setOwnerId("");
-        setStartDate(new Date().toISOString().slice(0, 10));
+        setStartDate(new Date());
         setRefreshKey((k) => k + 1);
-        toast({ title: "Suscripción creada", variant: "success" });
+        toast("Suscripción creada");
       } else {
-        const data = (await res.json().catch(() => null)) as {
-          error?: string;
-        } | null;
-        toast({
-          title: "Error al crear",
-          description: data?.error || "",
-          variant: "destructive",
-        });
+        toast("Error al crear la suscripción");
       }
     } finally {
       setLoading(false);
@@ -190,16 +205,9 @@ export default function AdminSubscriptions() {
     if (res.ok) {
       const updated: Subscription = await res.json();
       setSubs((prev) => prev.map((s) => (s.id === id ? updated : s)));
-      toast({ title: "Suscripción actualizada", variant: "success" });
+      toast("Suscripción actualizada");
     } else {
-      const data = (await res.json().catch(() => null)) as {
-        error?: string;
-      } | null;
-      toast({
-        title: "Error al actualizar",
-        description: data?.error || "",
-        variant: "destructive",
-      });
+      toast("Error al actualizar la suscripción");
     }
   }
 
@@ -209,16 +217,9 @@ export default function AdminSubscriptions() {
     });
     if (res.ok) {
       setSubs((prev) => prev.filter((s) => s.id !== id));
-      toast({ title: "Suscripción borrada", variant: "success" });
+      toast("Suscripción eliminada");
     } else {
-      const data = (await res.json().catch(() => null)) as {
-        error?: string;
-      } | null;
-      toast({
-        title: "Error al borrar",
-        description: data?.error || "",
-        variant: "destructive",
-      });
+      toast("Error al eliminar la suscripción");
     }
   }
 
@@ -235,55 +236,67 @@ export default function AdminSubscriptions() {
     <div className="space-y-6">
       <div className="rounded-lg border p-4 space-y-4">
         <div className="grid grid-cols-1 md:grid-cols-7 gap-3">
-          <select
-            className="border rounded px-3 py-2"
-            value={serviceId}
-            onChange={(e) => setServiceId(e.target.value)}
-          >
-            <option value="">Servicio</option>
-            {services.map((s) => (
-              <option key={s.id} value={s.id}>
-                {s.name}
-              </option>
-            ))}
-          </select>
-          <select
-            className="border rounded px-3 py-2"
-            value={ownerId}
-            onChange={(e) => setOwnerId(e.target.value)}
-          >
-            <option value="">Propietario</option>
-            {users.map((u) => (
-              <option key={u.id} value={u.id}>
-                {u.email}
-              </option>
-            ))}
-          </select>
-          <Input
-            type="date"
+          <Select value={serviceId || undefined} onValueChange={setServiceId}>
+            <SelectTrigger className="w-full">
+              <SelectValue placeholder="Servicio" />
+            </SelectTrigger>
+            <SelectContent>
+              {services.map((s) => (
+                <SelectItem key={s.id} value={s.id}>
+                  {s.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Select value={ownerId || undefined} onValueChange={setOwnerId}>
+            <SelectTrigger className="w-full">
+              <SelectValue placeholder="Propietario" />
+            </SelectTrigger>
+            <SelectContent>
+              {users.map((u) => (
+                <SelectItem key={u.id} value={u.id}>
+                  {u.email}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <DatePicker
             value={startDate}
-            onChange={(e) => setStartDate(e.target.value)}
-          />
-          <Input
-            placeholder="Buscar suscripciones..."
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            className="md:col-span-3"
+            onChange={(d) => d && setStartDate(d)}
           />
           <Button
             onClick={createSub}
             disabled={loading || !serviceId || !ownerId}
           >
-            {loading ? "Creando..." : "Crear suscripción"}
+            {loading ? (
+              "Creando..."
+            ) : (
+              <span className="inline-flex items-center gap-2">
+                <Plus className="h-4 w-4" /> Crear suscripción
+              </span>
+            )}
           </Button>
         </div>
       </div>
 
       <div className="rounded-lg border p-4">
         <div className="flex items-center justify-between mb-3">
-          <h3 className="font-medium">Suscripciones</h3>
-          <div className="text-sm text-neutral-600 dark:text-neutral-400">
-            {total} resultados
+          <h3 className="font-medium inline-flex items-center gap-2">
+            <Users className="h-4 w-4" /> Suscripciones
+          </h3>
+          <div className="flex items-center gap-3">
+            <div className="relative">
+              <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Buscar suscripciones..."
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                className="pl-8 w-[240px]"
+              />
+            </div>
+            <div className="text-sm text-neutral-600 dark:text-neutral-400">
+              {total} resultados
+            </div>
           </div>
         </div>
         {!hasSubs ? (
@@ -307,8 +320,9 @@ export default function AdminSubscriptions() {
                         }
                       }}
                     >
-                      Inicio{" "}
-                      {sort === "startDate" ? (dir === "asc" ? "▲" : "▼") : ""}
+                      <span className="inline-flex items-center gap-1">
+                        Inicio <ArrowUpDown className="h-3.5 w-3.5" />
+                      </span>
                     </button>
                   </th>
                   <th className="py-2 pr-4">
@@ -323,8 +337,9 @@ export default function AdminSubscriptions() {
                         }
                       }}
                     >
-                      Fin{" "}
-                      {sort === "endDate" ? (dir === "asc" ? "▲" : "▼") : ""}
+                      <span className="inline-flex items-center gap-1">
+                        Fin <ArrowUpDown className="h-3.5 w-3.5" />
+                      </span>
                     </button>
                   </th>
                   <th className="py-2 pr-4">
@@ -339,8 +354,9 @@ export default function AdminSubscriptions() {
                         }
                       }}
                     >
-                      Activa{" "}
-                      {sort === "isActive" ? (dir === "asc" ? "▲" : "▼") : ""}
+                      <span className="inline-flex items-center gap-1">
+                        Activa <ArrowUpDown className="h-3.5 w-3.5" />
+                      </span>
                     </button>
                   </th>
                   <th className="py-2 pr-4">Perfiles</th>
@@ -361,12 +377,33 @@ export default function AdminSubscriptions() {
                         : "—"}
                     </td>
                     <td className="py-2 pr-4 align-middle">
-                      <Button
-                        variant="outline"
-                        onClick={() => patch(s.id, { isActive: !s.isActive })}
-                      >
-                        {s.isActive ? "Activa" : "Inactiva"}
-                      </Button>
+                      <div className="inline-flex items-center gap-2">
+                        <Switch
+                          checked={s.isActive}
+                          onCheckedChange={(v) => {
+                            setSubs((prev) =>
+                              prev.map((it) =>
+                                it.id === s.id ? { ...it, isActive: v } : it
+                              )
+                            );
+                            patch(s.id, { isActive: v }).catch(() => {
+                              setSubs((prev) =>
+                                prev.map((it) =>
+                                  it.id === s.id ? { ...it, isActive: !v } : it
+                                )
+                              );
+                            });
+                          }}
+                          aria-label={
+                            s.isActive
+                              ? "Desactivar suscripción"
+                              : "Activar suscripción"
+                          }
+                        />
+                        <span className="text-xs text-muted-foreground">
+                          {s.isActive ? "Activa" : "Inactiva"}
+                        </span>
+                      </div>
                     </td>
                     <td className="py-2 pr-4 align-middle">
                       {s.profiles.filter((p) => p.isActive).length}
@@ -382,13 +419,17 @@ export default function AdminSubscriptions() {
                           patch(s.id, { endDate: new Date().toISOString() })
                         }
                       >
-                        Finalizar hoy
+                        <CalendarClock className="h-4 w-4 mr-1" /> Finalizar hoy
                       </Button>
                       <ConfirmButton
                         onConfirm={() => remove(s.id)}
                         title="Borrar suscripción"
                         description="Esta acción es irreversible."
-                        label="Borrar"
+                        label={
+                          <span className="inline-flex items-center gap-2">
+                            <Trash2 className="h-4 w-4" /> Borrar
+                          </span>
+                        }
                         variant="destructive"
                       />
                     </td>
@@ -401,18 +442,22 @@ export default function AdminSubscriptions() {
                 Mostrando {total === 0 ? 0 : start + 1}–{end} de {total}
               </div>
               <div className="flex items-center gap-2">
-                <select
-                  className="border rounded px-2 py-1"
-                  value={pageSize}
-                  onChange={(e) => {
-                    setPageSize(parseInt(e.target.value));
+                <Select
+                  value={String(pageSize)}
+                  onValueChange={(v) => {
+                    setPageSize(parseInt(v));
                     setPage(1);
                   }}
                 >
-                  <option value={10}>10</option>
-                  <option value={25}>25</option>
-                  <option value={50}>50</option>
-                </select>
+                  <SelectTrigger size="sm" className="w-[80px]">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="10">10</SelectItem>
+                    <SelectItem value="25">25</SelectItem>
+                    <SelectItem value="50">50</SelectItem>
+                  </SelectContent>
+                </Select>
                 <div className="flex items-center gap-2">
                   <Button
                     variant="outline"
@@ -451,20 +496,20 @@ function ProfileAdder({
   const [uid, setUid] = useState("");
   return (
     <div className="mt-2 flex items-center gap-2">
-      <select
-        className="border rounded px-2 py-1"
-        value={uid}
-        onChange={(e) => setUid(e.target.value)}
-      >
-        <option value="">Agregar perfil...</option>
-        {users.map((u) => (
-          <option key={u.id} value={u.id}>
-            {u.email}
-          </option>
-        ))}
-      </select>
+      <Select value={uid || undefined} onValueChange={setUid}>
+        <SelectTrigger size="sm" className="w-[200px]">
+          <SelectValue placeholder="Agregar perfil..." />
+        </SelectTrigger>
+        <SelectContent>
+          {users.map((u) => (
+            <SelectItem key={u.id} value={u.id}>
+              {u.email}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
       <Button disabled={!uid} onClick={() => uid && onAdd(uid)}>
-        Añadir
+        <UserPlus className="h-4 w-4 mr-1" /> Añadir
       </Button>
     </div>
   );

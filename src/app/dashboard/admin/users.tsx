@@ -2,9 +2,27 @@
 import { Button } from "@/components/ui/button";
 import ConfirmButton from "@/components/ui/confirm-button";
 import { Input } from "@/components/ui/input";
-import { toast } from "@/components/ui/toast";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  ArrowUpDown,
+  Pencil,
+  Plus,
+  RotateCw,
+  Save,
+  Search,
+  Trash2,
+  Users,
+  X,
+} from "lucide-react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
+import { toast } from "sonner";
 
 type UserRow = {
   id: string;
@@ -55,18 +73,9 @@ export default function AdminUsers() {
         setName("");
         setRole("USER");
         setRefreshKey((k) => k + 1);
-        toast({
-          title: "Usuario creado",
-          description: email,
-          variant: "success",
-        });
+        toast("Usuario creado");
       } else {
-        const err = (data as { error?: string } | null)?.error || "";
-        toast({
-          title: "Error al crear",
-          description: err,
-          variant: "destructive",
-        });
+        toast("Error al crear el usuario");
       }
     } finally {
       setLoading(false);
@@ -116,13 +125,9 @@ export default function AdminUsers() {
         prev.map((u) => (u.id === id ? { ...u, ...data.user } : u))
       );
       if (data.tempPassword) setTemp(data.tempPassword as string);
-      toast({ title: "Usuario actualizado", variant: "success" });
+      toast("Usuario actualizado");
     } else {
-      toast({
-        title: "Error al actualizar",
-        description: data.error || "",
-        variant: "destructive",
-      });
+      toast("Error al actualizar el usuario");
     }
   }
 
@@ -130,16 +135,9 @@ export default function AdminUsers() {
     const res = await fetch(`/api/admin/users/${id}`, { method: "DELETE" });
     if (res.ok) {
       setUsers((prev) => prev.filter((u) => u.id !== id));
-      toast({ title: "Usuario borrado", variant: "success" });
+      toast("Usuario eliminado");
     } else {
-      const data = (await res.json().catch(() => null)) as {
-        error?: string;
-      } | null;
-      toast({
-        title: "Error al borrar",
-        description: data?.error || "",
-        variant: "destructive",
-      });
+      toast("Error al eliminar el usuario");
     }
   }
 
@@ -170,7 +168,8 @@ export default function AdminUsers() {
     const di: "asc" | "desc" = diRaw === "asc" ? "asc" : "desc";
     if (so !== sort) setSort(so);
     if (di !== dir) setDir(di);
-  }, [searchParams, page, pageSize, query, sort, dir]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams]);
 
   useEffect(() => {
     const curP = searchParams.get(pageKey) || "1";
@@ -180,7 +179,7 @@ export default function AdminUsers() {
     const curDi = searchParams.get(dirKey) || "desc";
     const nextP = String(page);
     const nextS = String(pageSize);
-    const nextQ = query;
+    const nextQ = query.trim();
     const nextSo = sort;
     const nextDi = dir;
     if (
@@ -194,12 +193,13 @@ export default function AdminUsers() {
     const params = new URLSearchParams(searchParams);
     params.set(pageKey, nextP);
     params.set(sizeKey, nextS);
-    if (nextQ.trim()) params.set(qKey, nextQ.trim());
+    if (nextQ) params.set(qKey, nextQ);
     else params.delete(qKey);
     params.set(sortKey, nextSo);
     params.set(dirKey, nextDi);
     router.replace(`${pathname}?${params.toString()}`, { scroll: false });
-  }, [page, pageSize, sort, dir, query, searchParams, router, pathname]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [page, pageSize, sort, dir, query, router, pathname]);
 
   return (
     <div className="space-y-6">
@@ -215,22 +215,26 @@ export default function AdminUsers() {
             value={name}
             onChange={(e) => setName(e.target.value)}
           />
-          <select
-            className="border rounded px-3 py-2"
+          <Select
             value={role}
-            onChange={(e) => setRole(e.target.value as "ADMIN" | "USER")}
+            onValueChange={(v) => setRole(v as "ADMIN" | "USER")}
           >
-            <option value="USER">Usuario</option>
-            <option value="ADMIN">Admin</option>
-          </select>
-          <Input
-            placeholder="Buscar usuarios..."
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            className="md:col-span-2"
-          />
+            <SelectTrigger className="w-full">
+              <SelectValue placeholder="Rol" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="USER">Usuario</SelectItem>
+              <SelectItem value="ADMIN">Admin</SelectItem>
+            </SelectContent>
+          </Select>
           <Button onClick={createUser} disabled={loading}>
-            {loading ? "Creando..." : "Crear usuario"}
+            {loading ? (
+              "Creando..."
+            ) : (
+              <span className="inline-flex items-center gap-2">
+                <Plus className="h-4 w-4" /> Crear usuario
+              </span>
+            )}
           </Button>
         </div>
         {temp && (
@@ -242,9 +246,22 @@ export default function AdminUsers() {
 
       <div className="rounded-lg border p-4">
         <div className="flex items-center justify-between mb-3">
-          <h3 className="font-medium">Usuarios</h3>
-          <div className="text-sm text-neutral-600 dark:text-neutral-400">
-            {total} resultados
+          <h3 className="font-medium inline-flex items-center gap-2">
+            <Users className="h-4 w-4" /> Usuarios
+          </h3>
+          <div className="flex items-center gap-3">
+            <div className="relative">
+              <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Buscar usuarios..."
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                className="pl-8 w-[220px]"
+              />
+            </div>
+            <div className="text-sm text-neutral-600 dark:text-neutral-400">
+              {total} resultados
+            </div>
           </div>
         </div>
         {!hasUsers ? (
@@ -266,8 +283,9 @@ export default function AdminUsers() {
                         }
                       }}
                     >
-                      Email{" "}
-                      {sort === "email" ? (dir === "asc" ? "▲" : "▼") : ""}
+                      <span className="inline-flex items-center gap-1">
+                        Email <ArrowUpDown className="h-3.5 w-3.5" />
+                      </span>
                     </button>
                   </th>
                   <th className="py-2 pr-4">
@@ -282,8 +300,9 @@ export default function AdminUsers() {
                         }
                       }}
                     >
-                      Nombre{" "}
-                      {sort === "name" ? (dir === "asc" ? "▲" : "▼") : ""}
+                      <span className="inline-flex items-center gap-1">
+                        Nombre <ArrowUpDown className="h-3.5 w-3.5" />
+                      </span>
                     </button>
                   </th>
                   <th className="py-2 pr-4">
@@ -298,7 +317,9 @@ export default function AdminUsers() {
                         }
                       }}
                     >
-                      Rol {sort === "role" ? (dir === "asc" ? "▲" : "▼") : ""}
+                      <span className="inline-flex items-center gap-1">
+                        Rol <ArrowUpDown className="h-3.5 w-3.5" />
+                      </span>
                     </button>
                   </th>
                   <th className="py-2 pr-4">Acciones</th>
@@ -315,18 +336,20 @@ export default function AdminUsers() {
                       />
                     </td>
                     <td className="py-2 pr-4 align-middle">
-                      <select
-                        className="border rounded px-2 py-1"
+                      <Select
                         value={u.role}
-                        onChange={(e) =>
-                          updateUser(u.id, {
-                            role: e.target.value as "ADMIN" | "USER",
-                          })
+                        onValueChange={(v) =>
+                          updateUser(u.id, { role: v as "ADMIN" | "USER" })
                         }
                       >
-                        <option value="USER">Usuario</option>
-                        <option value="ADMIN">Admin</option>
-                      </select>
+                        <SelectTrigger size="sm" className="min-w-28">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="USER">Usuario</SelectItem>
+                          <SelectItem value="ADMIN">Admin</SelectItem>
+                        </SelectContent>
+                      </Select>
                     </td>
                     <td className="py-2 pr-4 align-middle space-x-2">
                       <Button
@@ -335,13 +358,17 @@ export default function AdminUsers() {
                           updateUser(u.id, { resetPassword: true })
                         }
                       >
-                        Reset pass
+                        <RotateCw className="h-4 w-4 mr-1" /> Reset pass
                       </Button>
                       <ConfirmButton
                         onConfirm={() => removeUser(u.id)}
                         title="Borrar usuario"
                         description="Esta acción es irreversible."
-                        label="Borrar"
+                        label={
+                          <span className="inline-flex items-center gap-2">
+                            <Trash2 className="h-4 w-4" /> Borrar
+                          </span>
+                        }
                         variant="destructive"
                       />
                     </td>
@@ -354,18 +381,22 @@ export default function AdminUsers() {
                 Mostrando {total === 0 ? 0 : start + 1}–{end} de {total}
               </div>
               <div className="flex items-center gap-2">
-                <select
-                  className="border rounded px-2 py-1"
-                  value={pageSize}
-                  onChange={(e) => {
-                    setPageSize(parseInt(e.target.value));
+                <Select
+                  value={String(pageSize)}
+                  onValueChange={(v) => {
+                    setPageSize(parseInt(v));
                     setPage(1);
                   }}
                 >
-                  <option value={10}>10</option>
-                  <option value={25}>25</option>
-                  <option value={50}>50</option>
-                </select>
+                  <SelectTrigger size="sm" className="w-[90px]">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="10">10</SelectItem>
+                    <SelectItem value="25">25</SelectItem>
+                    <SelectItem value="50">50</SelectItem>
+                  </SelectContent>
+                </Select>
                 <div className="flex items-center gap-2">
                   <Button
                     variant="outline"
@@ -409,7 +440,7 @@ function InlineEdit({
       <div className="flex items-center gap-2">
         <span>{value || "—"}</span>
         <Button variant="secondary" onClick={() => setEditing(true)}>
-          Editar
+          <Pencil className="h-4 w-4 mr-1" /> Editar
         </Button>
       </div>
     );
@@ -422,10 +453,10 @@ function InlineEdit({
           setEditing(false);
         }}
       >
-        Guardar
+        <Save className="h-4 w-4 mr-1" /> Guardar
       </Button>
       <Button variant="secondary" onClick={() => setEditing(false)}>
-        Cancelar
+        <X className="h-4 w-4 mr-1" /> Cancelar
       </Button>
     </div>
   );

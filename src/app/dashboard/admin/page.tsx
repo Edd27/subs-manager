@@ -13,11 +13,23 @@ export default async function AdminPage() {
   return (
     <div className="space-y-6">
       <h2 className="text-xl font-semibold">Administración</h2>
-      <AdminUsers />
-      <AdminServices />
-      <AdminSubscriptions />
-      <AdminPayments />
-      <AdminStatements />
+      <div className="divide-y">
+        <section className="py-6 first:pt-0">
+          <AdminUsers />
+        </section>
+        <section className="py-6">
+          <AdminServices />
+        </section>
+        <section className="py-6">
+          <AdminSubscriptions />
+        </section>
+        <section className="py-6">
+          <AdminPayments />
+        </section>
+        <section className="py-6">
+          <AdminStatements />
+        </section>
+      </div>
     </div>
   );
 }

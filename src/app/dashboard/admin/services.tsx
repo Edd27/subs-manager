@@ -2,9 +2,27 @@
 import { Button } from "@/components/ui/button";
 import ConfirmButton from "@/components/ui/confirm-button";
 import { Input } from "@/components/ui/input";
-import { toast } from "@/components/ui/toast";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
+import {
+  ArrowUpDown,
+  Pencil,
+  Plus,
+  Save,
+  Search,
+  Trash2,
+  Wrench,
+  X,
+} from "lucide-react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
+import { toast } from "sonner";
 
 type Service = {
   id: string;
@@ -56,20 +74,9 @@ export default function AdminServices() {
         setCost("");
         setMaxProfiles("4");
         setRefreshKey((k) => k + 1);
-        toast({
-          title: "Servicio creado",
-          description: name,
-          variant: "success",
-        });
+        toast("Servicio creado");
       } else {
-        const data = (await res.json().catch(() => null)) as {
-          error?: string;
-        } | null;
-        toast({
-          title: "Error al crear",
-          description: data?.error || "",
-          variant: "destructive",
-        });
+        toast("Error al crear servicio");
       }
     } finally {
       setLoading(false);
@@ -114,16 +121,9 @@ export default function AdminServices() {
     if (res.ok) {
       const updated: Service = await res.json();
       setServices((prev) => prev.map((s) => (s.id === id ? updated : s)));
-      toast({ title: "Servicio actualizado", variant: "success" });
+      toast("Servicio actualizado");
     } else {
-      const data = (await res.json().catch(() => null)) as {
-        error?: string;
-      } | null;
-      toast({
-        title: "Error al actualizar",
-        description: data?.error || "",
-        variant: "destructive",
-      });
+      toast("Error al actualizar el servicio");
     }
   }
 
@@ -131,16 +131,9 @@ export default function AdminServices() {
     const res = await fetch(`/api/admin/services/${id}`, { method: "DELETE" });
     if (res.ok) {
       setServices((prev) => prev.filter((s) => s.id !== id));
-      toast({ title: "Servicio borrado", variant: "success" });
+      toast("Servicio eliminado");
     } else {
-      const data = (await res.json().catch(() => null)) as {
-        error?: string;
-      } | null;
-      toast({
-        title: "Error al borrar",
-        description: data?.error || "",
-        variant: "destructive",
-      });
+      toast("Error al eliminar el servicio");
     }
   }
 
@@ -167,10 +160,11 @@ export default function AdminServices() {
     let so: SortField = "name";
     if (soRaw && (allowedSort as readonly string[]).includes(soRaw))
       so = soRaw as SortField;
-    const di: "asc" | "desc" = diRaw === "asc" ? "asc" : "desc";
+    const di: "asc" | "desc" = diRaw === "desc" ? "desc" : "asc";
     if (so !== sort) setSort(so);
     if (di !== dir) setDir(di);
-  }, [searchParams, page, pageSize, query, sort, dir]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams]);
   useEffect(() => {
     const curP = searchParams.get(pageKey) || "1";
     const curS = searchParams.get(sizeKey) || "10";
@@ -179,7 +173,7 @@ export default function AdminServices() {
     const curDi = searchParams.get(dirKey) || "asc";
     const nextP = String(page);
     const nextS = String(pageSize);
-    const nextQ = query;
+    const nextQ = query.trim();
     const nextSo = sort;
     const nextDi = dir;
     if (
@@ -193,12 +187,13 @@ export default function AdminServices() {
     const params = new URLSearchParams(searchParams);
     params.set(pageKey, nextP);
     params.set(sizeKey, nextS);
-    if (nextQ.trim()) params.set(qKey, nextQ.trim());
+    if (nextQ) params.set(qKey, nextQ);
     else params.delete(qKey);
     params.set(sortKey, nextSo);
     params.set(dirKey, nextDi);
     router.replace(`${pathname}?${params.toString()}`, { scroll: false });
-  }, [page, pageSize, sort, dir, query, searchParams, router, pathname]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [page, pageSize, sort, dir, query, pathname]);
 
   return (
     <div className="space-y-6">
@@ -219,23 +214,36 @@ export default function AdminServices() {
             value={maxProfiles}
             onChange={(e) => setMaxProfiles(e.target.value)}
           />
-          <Input
-            placeholder="Buscar servicios..."
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            className="md:col-span-2"
-          />
           <Button onClick={createService} disabled={loading}>
-            {loading ? "Creando..." : "Crear servicio"}
+            {loading ? (
+              "Creando..."
+            ) : (
+              <span className="inline-flex items-center gap-2">
+                <Plus className="h-4 w-4" /> Crear servicio
+              </span>
+            )}
           </Button>
         </div>
       </div>
 
       <div className="rounded-lg border p-4">
         <div className="flex items-center justify-between mb-3">
-          <h3 className="font-medium">Servicios</h3>
-          <div className="text-sm text-neutral-600 dark:text-neutral-400">
-            {total} resultados
+          <h3 className="font-medium inline-flex items-center gap-2">
+            <Wrench className="h-4 w-4" /> Servicios
+          </h3>
+          <div className="flex items-center gap-3">
+            <div className="relative">
+              <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Buscar servicios..."
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                className="pl-8 w-[220px]"
+              />
+            </div>
+            <div className="text-sm text-neutral-600 dark:text-neutral-400">
+              {total} resultados
+            </div>
           </div>
         </div>
         {!has ? (
@@ -257,8 +265,9 @@ export default function AdminServices() {
                         }
                       }}
                     >
-                      Nombre{" "}
-                      {sort === "name" ? (dir === "asc" ? "▲" : "▼") : ""}
+                      <span className="inline-flex items-center gap-1">
+                        Nombre <ArrowUpDown className="h-3.5 w-3.5" />
+                      </span>
                     </button>
                   </th>
                   <th className="py-2 pr-4">
@@ -273,12 +282,9 @@ export default function AdminServices() {
                         }
                       }}
                     >
-                      Costo{" "}
-                      {sort === "monthlyCost"
-                        ? dir === "asc"
-                          ? "▲"
-                          : "▼"
-                        : ""}
+                      <span className="inline-flex items-center gap-1">
+                        Costo <ArrowUpDown className="h-3.5 w-3.5" />
+                      </span>
                     </button>
                   </th>
                   <th className="py-2 pr-4">
@@ -293,12 +299,9 @@ export default function AdminServices() {
                         }
                       }}
                     >
-                      Máx perfiles{" "}
-                      {sort === "maxProfiles"
-                        ? dir === "asc"
-                          ? "▲"
-                          : "▼"
-                        : ""}
+                      <span className="inline-flex items-center gap-1">
+                        Máx perfiles <ArrowUpDown className="h-3.5 w-3.5" />
+                      </span>
                     </button>
                   </th>
                   <th className="py-2 pr-4">
@@ -313,8 +316,9 @@ export default function AdminServices() {
                         }
                       }}
                     >
-                      Activo{" "}
-                      {sort === "isActive" ? (dir === "asc" ? "▲" : "▼") : ""}
+                      <span className="inline-flex items-center gap-1">
+                        Activo <ArrowUpDown className="h-3.5 w-3.5" />
+                      </span>
                     </button>
                   </th>
                   <th className="py-2 pr-4">Acciones</th>
@@ -346,19 +350,44 @@ export default function AdminServices() {
                       />
                     </td>
                     <td className="py-2 pr-4 align-middle">
-                      <Button
-                        variant="outline"
-                        onClick={() => patch(s.id, { isActive: !s.isActive })}
-                      >
-                        {s.isActive ? "Activo" : "Inactivo"}
-                      </Button>
+                      <div className="inline-flex items-center gap-2">
+                        <Switch
+                          checked={s.isActive}
+                          onCheckedChange={(v) => {
+                            setServices((prev) =>
+                              prev.map((it) =>
+                                it.id === s.id ? { ...it, isActive: v } : it
+                              )
+                            );
+                            patch(s.id, { isActive: v }).catch(() => {
+                              setServices((prev) =>
+                                prev.map((it) =>
+                                  it.id === s.id ? { ...it, isActive: !v } : it
+                                )
+                              );
+                            });
+                          }}
+                          aria-label={
+                            s.isActive
+                              ? "Desactivar servicio"
+                              : "Activar servicio"
+                          }
+                        />
+                        <span className="text-xs text-muted-foreground">
+                          {s.isActive ? "Activo" : "Inactivo"}
+                        </span>
+                      </div>
                     </td>
                     <td className="py-2 pr-4 align-middle space-x-2">
                       <ConfirmButton
                         onConfirm={() => remove(s.id)}
                         title="Borrar servicio"
                         description="Esta acción es irreversible."
-                        label="Borrar"
+                        label={
+                          <span className="inline-flex items-center gap-2">
+                            <Trash2 className="h-4 w-4" /> Borrar
+                          </span>
+                        }
                         variant="destructive"
                       />
                     </td>
@@ -371,18 +400,22 @@ export default function AdminServices() {
                 Mostrando {total === 0 ? 0 : start + 1}–{end} de {total}
               </div>
               <div className="flex items-center gap-2">
-                <select
-                  className="border rounded px-2 py-1"
-                  value={pageSize}
-                  onChange={(e) => {
-                    setPageSize(parseInt(e.target.value));
+                <Select
+                  value={String(pageSize)}
+                  onValueChange={(v) => {
+                    setPageSize(parseInt(v));
                     setPage(1);
                   }}
                 >
-                  <option value={10}>10</option>
-                  <option value={25}>25</option>
-                  <option value={50}>50</option>
-                </select>
+                  <SelectTrigger size="sm" className="w-[90px]">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="10">10</SelectItem>
+                    <SelectItem value="25">25</SelectItem>
+                    <SelectItem value="50">50</SelectItem>
+                  </SelectContent>
+                </Select>
                 <div className="flex items-center gap-2">
                   <Button
                     variant="outline"
@@ -426,7 +459,7 @@ function InlineEdit({
       <div className="flex items-center gap-2">
         <span>{value}</span>
         <Button variant="secondary" onClick={() => setEditing(true)}>
-          Editar
+          <Pencil className="h-4 w-4 mr-1" /> Editar
         </Button>
       </div>
     );
@@ -439,10 +472,10 @@ function InlineEdit({
           setEditing(false);
         }}
       >
-        Guardar
+        <Save className="h-4 w-4 mr-1" /> Guardar
       </Button>
       <Button variant="secondary" onClick={() => setEditing(false)}>
-        Cancelar
+        <X className="h-4 w-4 mr-1" /> Cancelar
       </Button>
     </div>
   );

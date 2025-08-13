@@ -28,7 +28,7 @@ async function main() {
       name: 'Usuario Demo',
       role: 'USER',
       mustChangePassword: false,
-      passwordHash: await bcrypt.hash('user123', 10),
+      passwordHash: await bcrypt.hash('user1234', 10),
     },
   });
 

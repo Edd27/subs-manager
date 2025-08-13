@@ -25,6 +25,7 @@ npm run dev:infra:up
 
 ```bash
 npm run db:migrate
+npm run db:seed
 ```
 
 5) Desarrollo en tu host (recomendado)
@@ -71,6 +72,27 @@ Notas
 	- Ejecutar Next en tu host con `npm run dev` y usar DB/Redis en Docker (más rápido).
 	- O ejecutar todo en Docker con `npm run dev:docker` (hot reload montando el código en el contenedor).
 - Para detener el stack de desarrollo en Docker con hot reload: usa `Ctrl+C` en la terminal de `dev:docker` o `docker compose -f docker/compose.infra.yml -f docker/compose.dev.yml down`.
+
+### Seed de datos
+- El seed crea:
+	- Admin: admin@example.com / admin123
+	- Usuario demo: user@example.com / user123
+	- Servicios: Netflix y Spotify
+
+Ejecución en tu host (usando la DB del compose):
+
+```bash
+npm run dev:infra:up
+npm run db:migrate
+npm run db:seed
+```
+
+Ejecución en contenedor app-dev (si usas `npm run dev:docker`):
+
+```bash
+# con el stack dev levantado
+docker compose -f docker/compose.infra.yml -f docker/compose.dev.yml exec app-dev npm run db:seed
+```
 
 ### Prisma
 - Esquema en prisma/schema.prisma

@@ -2,9 +2,17 @@
 import { Button } from "@/components/ui/button";
 import ConfirmButton from "@/components/ui/confirm-button";
 import { Input } from "@/components/ui/input";
-import { toast } from "@/components/ui/toast";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { FileSpreadsheet, Loader2, Search, Trash2 } from "lucide-react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
+import { toast } from "sonner";
 
 type StatementItem = {
   id: string;
@@ -46,7 +54,7 @@ export default function AdminStatements() {
       params.set("pageSize", "100");
       const [stRes, usrRes] = await Promise.all([
         fetch(`/api/statements?${params.toString()}`),
-        fetch("/api/admin/users"),
+        fetch("/api/admin/users?page=1&pageSize=100&sort=email&dir=asc"),
       ]);
       if (!abort) {
         if (stRes.ok) {
@@ -58,7 +66,10 @@ export default function AdminStatements() {
             setStatements(data.items);
           }
         }
-        if (usrRes.ok) setUsers(await usrRes.json());
+        if (usrRes.ok) {
+          const u = await usrRes.json();
+          setUsers(Array.isArray(u) ? u : (u.items ?? []));
+        }
       }
     }
     load();
@@ -81,7 +92,8 @@ export default function AdminStatements() {
     const q = searchParams.get(qKey) || "";
     if (q !== query) setQuery(q);
     setPageBySt((prev) => ({ ...prev, ...nextPages }));
-  }, [searchParams, pageSize, query]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams]);
 
   useEffect(() => {
     const params = new URLSearchParams(searchParams);
@@ -98,14 +110,16 @@ export default function AdminStatements() {
       }
     }
     const curQ = searchParams.get(qKey) || "";
-    if (curQ !== query) {
-      if (query.trim()) params.set(qKey, query.trim());
+    const nextQ = query.trim();
+    if (curQ !== nextQ) {
+      if (nextQ) params.set(qKey, nextQ);
       else params.delete(qKey);
       changed = true;
     }
     if (changed)
       router.replace(`${pathname}?${params.toString()}`, { scroll: false });
-  }, [pageBySt, pageSize, query, searchParams, router, pathname]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pageBySt, pageSize, query, router, pathname]);
 
   async function generate() {
     setLoading(true);
@@ -113,16 +127,9 @@ export default function AdminStatements() {
       const res = await fetch("/api/statements", { method: "POST" });
       if (res.ok) {
         setRefreshKey((k) => k + 1);
-        toast({ title: "Estados generados", variant: "success" });
+        toast("Estados generados");
       } else {
-        const data = (await res.json().catch(() => null)) as {
-          error?: string;
-        } | null;
-        toast({
-          title: "Error al generar",
-          description: data?.error || "",
-          variant: "destructive",
-        });
+        toast("Error al generar los estados");
       }
     } finally {
       setLoading(false);
@@ -137,16 +144,9 @@ export default function AdminStatements() {
     });
     if (res.ok) {
       setRefreshKey((k) => k + 1);
-      toast({ title: "Ítem actualizado", variant: "success" });
+      toast("Elemento actualizado");
     } else {
-      const data = (await res.json().catch(() => null)) as {
-        error?: string;
-      } | null;
-      toast({
-        title: "Error al actualizar",
-        description: data?.error || "",
-        variant: "destructive",
-      });
+      toast("Error al actualizar el elemento");
     }
   }
 
@@ -156,16 +156,9 @@ export default function AdminStatements() {
     });
     if (res.ok) {
       setRefreshKey((k) => k + 1);
-      toast({ title: "Ítem borrado", variant: "success" });
+      toast("Elemento eliminado");
     } else {
-      const data = (await res.json().catch(() => null)) as {
-        error?: string;
-      } | null;
-      toast({
-        title: "Error al borrar",
-        description: data?.error || "",
-        variant: "destructive",
-      });
+      toast("Error al eliminar el elemento");
     }
   }
 
@@ -176,18 +169,35 @@ export default function AdminStatements() {
       <div className="rounded-lg border p-4 space-y-4">
         <div className="flex gap-3">
           <Button onClick={generate} disabled={loading}>
-            {loading ? "Generando..." : "Generar estados mes actual"}
+            {loading ? (
+              <span className="inline-flex items-center gap-2">
+                <Loader2 className="h-4 w-4 animate-spin" /> Generando...
+              </span>
+            ) : (
+              <span className="inline-flex items-center gap-2">
+                <FileSpreadsheet className="h-4 w-4" /> Generar estados mes
+                actual
+              </span>
+            )}
           </Button>
-          <Input
-            placeholder="Buscar por usuario..."
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-          />
         </div>
       </div>
 
       <div className="rounded-lg border p-4">
-        <h3 className="font-medium mb-3">Estados de cuenta</h3>
+        <div className="flex items-center justify-between mb-3">
+          <h3 className="font-medium inline-flex items-center gap-2">
+            <FileSpreadsheet className="h-4 w-4" /> Estados de cuenta
+          </h3>
+          <div className="relative">
+            <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Buscar por usuario..."
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              className="pl-8 w-[260px]"
+            />
+          </div>
+        </div>
         {!has ? (
           <div className="text-sm text-neutral-500">Sin estados</div>
         ) : (
@@ -235,29 +245,36 @@ export default function AdminStatements() {
                             {Number(it.amountDue).toFixed(2)}
                           </td>
                           <td className="py-2 pr-4 align-middle">
-                            <select
-                              className="border rounded px-2 py-1"
+                            <Select
                               value={it.status}
-                              onChange={(e) =>
+                              onValueChange={(v) =>
                                 patchItem(it.id, {
-                                  status: e.target.value as
-                                    | "PENDING"
-                                    | "PAID"
-                                    | "CREDIT",
+                                  status: v as "PENDING" | "PAID" | "CREDIT",
                                 })
                               }
                             >
-                              <option value="PENDING">PENDIENTE</option>
-                              <option value="PAID">PAGADO</option>
-                              <option value="CREDIT">CRÉDITO</option>
-                            </select>
+                              <SelectTrigger size="sm" className="w-[140px]">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="PENDING">
+                                  PENDIENTE
+                                </SelectItem>
+                                <SelectItem value="PAID">PAGADO</SelectItem>
+                                <SelectItem value="CREDIT">CRÉDITO</SelectItem>
+                              </SelectContent>
+                            </Select>
                           </td>
                           <td className="py-2 pr-4 align-middle">
                             <ConfirmButton
                               onConfirm={() => removeItem(it.id)}
                               title="Borrar ítem"
                               description="Esta acción es irreversible."
-                              label="Borrar"
+                              label={
+                                <span className="inline-flex items-center gap-2">
+                                  <Trash2 className="h-4 w-4" /> Borrar
+                                </span>
+                              }
                               variant="destructive"
                             />
                           </td>
@@ -270,11 +287,10 @@ export default function AdminStatements() {
                       Mostrando {total === 0 ? 0 : start + 1}–{end} de {total}
                     </div>
                     <div className="flex items-center gap-2">
-                      <select
-                        className="border rounded px-2 py-1"
-                        value={pageSize}
-                        onChange={(e) => {
-                          setPageSize(parseInt(e.target.value));
+                      <Select
+                        value={String(pageSize)}
+                        onValueChange={(v) => {
+                          setPageSize(parseInt(v));
                           setPageBySt((prev) => {
                             const entries = Object.keys(prev).map(
                               (k) => [k, 1] as const
@@ -283,10 +299,15 @@ export default function AdminStatements() {
                           });
                         }}
                       >
-                        <option value={10}>10</option>
-                        <option value={25}>25</option>
-                        <option value={50}>50</option>
-                      </select>
+                        <SelectTrigger size="sm" className="w-[80px]">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="10">10</SelectItem>
+                          <SelectItem value="25">25</SelectItem>
+                          <SelectItem value="50">50</SelectItem>
+                        </SelectContent>
+                      </Select>
                       <div className="flex items-center gap-2">
                         <Button
                           variant="outline"
